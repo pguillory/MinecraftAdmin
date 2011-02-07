@@ -1,0 +1,10 @@
+echo "*** Installing c10t"
+apt-get install -y cmake libpng-dev zlib1g-dev libboost-all-dev libfreetype6-dev
+cd /usr/local/src
+git clone https://github.com/udoprog/c10t.git
+cd c10t
+mkdir build
+cd build
+cmake ..
+make c10t
+cp c10t /usr/local/bin/

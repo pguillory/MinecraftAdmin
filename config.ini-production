@@ -1,0 +1,14 @@
+[MinecraftAdmin]
+port = 8080
+
+[Minecraft]
+path = /mnt/minecraft
+start_memory = 512M
+max_memory = 1024M
+
+[MinecraftOverviewer]
+path = /mnt/Minecraft-Overviewer
+# PYTHONPATH = 
+map_path = /mnt/map
+cache_path = /mnt/mapcache
+every_seconds = 60

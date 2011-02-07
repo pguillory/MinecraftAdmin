@@ -1,4 +1,4 @@
-MinecraftAdmin is a wrapper for the Minecraft SMP server process.
+MinecraftAdmin is a wrapper for the Minecraft SMP server process.  It runs on Node.js.
 
 Features:
 ---------

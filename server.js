@@ -1,6 +1,6 @@
 require('./deps/streamlinejs/lib/node-init.js')
 
-var MinecraftAdmin = require('./.')
+var Minecraft = require('./.')
 var iniconf = require('./deps/iniconf')
 var path = require('path')
 var sys = require('sys')
@@ -24,4 +24,4 @@ iniconf.validate(conf, {
     },
 })
 
-new MinecraftAdmin.Server(conf)
+new Minecraft.AdminServer(conf)

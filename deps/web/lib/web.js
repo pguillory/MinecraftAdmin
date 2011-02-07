@@ -200,7 +200,7 @@ web.cacheControl = function(maxage) {
 web.static = function(dir) {
     var pathlib = require('path')
     var fs = require('fs')
-    var mime = require('./ext/node-mime')
+    var mime = require('./deps/node-mime')
 
     return function(request, response, callback) {
         var filename = dir + request.url
@@ -248,7 +248,7 @@ web.static = function(dir) {
 web.file = function(filename) {
     var pathlib = require('path')
     var fs = require('fs')
-    var mime = require('./ext/node-mime')
+    var mime = require('./deps/node-mime')
 
     return function(request, response, callback) {
         var readstream = fs.createReadStream(filename, {

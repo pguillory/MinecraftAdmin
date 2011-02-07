@@ -1,5 +1,5 @@
 /*
- * Usage: node ../lib/node-init.js diskUsage2 [path]
+ * Usage: ../bin/node-streamline diskUsage2 [path]
  *
  * This file is a parralelized version of the `diskUsage.js` example. 
  * 
@@ -26,22 +26,22 @@ var flows = require('../lib/flows');
 
 var fileFunnel = flows.funnel(20);
 
-function du_(path){
+function du(_, path){
 	var total = 0;
-	var stat = fs.stat_(path);
+	var stat = fs.stat(path, _);
 	if (stat.isFile()) {
-		fileFunnel.channel_(function _(){
-			total += fs.readFile_(path).length;
+		fileFunnel.channel(_, function(_){
+			total += fs.readFile(path, _).length;
 		});
 	}
 	else 
 		if (stat.isDirectory()) {
-			var files = fs.readdir_(path);
+			var files = fs.readdir(path, _);
 			flows.spray(files.map(function(file){
-				return function _(){
-					total += du_(path + "/" + file);
+				return function(_){
+					total += du(_, path + "/" + file);
 				}
-			})).collectAll_();
+			})).collectAll(_);
 			console.log(path + ": " + total);
 		}
 		else {
@@ -50,11 +50,12 @@ function du_(path){
 	return total;
 }
 
-var p = process.argv.length > 3 ? process.argv[3] : ".";
+var p = process.argv.length > 2 ? process.argv[2] : ".";
 
 var t0 = Date.now();
-du(p, function(err, result){
-	if (err) 
+function report(err, result) {
+	if (err)
 		console.log(err.toString() + "\n" + err.stack);
 	console.log("completed in " + (Date.now() - t0) + " ms");
-})
+}
+du(report, p);

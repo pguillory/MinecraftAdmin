@@ -79,6 +79,7 @@
 			}
 			while (found);
 		}
+		return node;
 	}
 	
 	// generic helper to traverse parse tree
@@ -139,9 +140,11 @@
 	function Template(fn, isExpression){
 		// parser the function and set the root 
 		var _root = parse(fn.toString()).children[0].body;
-		if (_root.children.length != 1) 
-			throw new Error("bad template (probably a missing block)");
-		_root = _root.children[0];
+		if (_root.children.length == 1) 
+			_root = _root.children[0];
+		else 
+			_root = _node(BLOCK, _root.children);
+			
 		// if template is an expression rather than a full statement, go one more step down
 		if (isExpression) 
 			_root = _root.expression;
@@ -195,7 +198,7 @@
 					_flatten(node);
 					if (restructuring) {
 						node._restructured = true;
-						// mark return statements as frozen so that we don't transform them again in the finish pass.
+						// mark return statements as done so that we don't transform them again in the finish pass.
 						node._done = node.type == RETURN;
 					}
 					node._sequence = bindings.sequence;
@@ -226,10 +229,33 @@
 	}
 	
 	/*
-	 * Utility to detect async names
+	 * compat stuff
 	 */
-	function _endsWithUnderscore(str){
-		return typeof str == "string" && str.length > 0 && str[str.length - 1] == '_';
+	function _compat(node){
+		function _endsWithUnderscore(str){
+			return typeof str == "string" && str.length > 0 && str[str.length - 1] == '_';
+		}
+		function _removeUnderscore(str) {
+			return str.substring(0, str.length - 1);
+		}
+		
+		if (node.type == CALL) {
+			var ident = node.children[0];
+			if (ident.type == DOT) 
+				ident = ident.children[1];
+			if (_endsWithUnderscore(ident.value)) {
+				console.log("Old style streamline.js call: " + ident.value);
+				node.children[1].children.push(_identifier('_'));
+				ident.value = _removeUnderscore(ident.value);	
+			}	
+		}
+		else if (node.type == FUNCTION) {
+			if (_endsWithUnderscore(node.name)) {
+				console.log("Old style streamline.js function definition: " + node.name);
+				node.params.push('_');
+				node.name = _removeUnderscore(node.name);
+			}
+		}
 	}
 	
 	/*
@@ -245,6 +271,7 @@
 	 */
 	function _analyze(node){
 		function _analyzeOne(node, sequence){
+			_compat(node);
 			//console.log("ANALYZING: " + _tag(node));
 			if (node.type == SCRIPT) {
 				sequence = new Sequence();
@@ -257,17 +284,15 @@
 					node._async = true;
 				return child;
 			});
-			if (node.type == IDENTIFIER && _endsWithUnderscore(node.value)) 
+			if (node.type == IDENTIFIER && node.value == '_') 
 				node._async = true;
 			if (node.type == FUNCTION) {
-				var async = _endsWithUnderscore(node.name);
+				var async = node.params.filter(function(param) { return param == '_'; }).length != 0;
 				if (node._async && !async) 
-					throw new Error("Async function name does not end with underscore: " + node.name)
+					throw new Error("Function contains async calls but does not have _ parameter: " + node.name);
+				if (!node._async && async)
+					node.body._async = true; // force script restructuring if empty body
 				node._async = async;
-				if (async) {
-					node.name = node.name.substring(0, node.name.length - 1);
-					node.params.push("_");
-				}
 			}
 		}
 		_analyzeOne(node, new Sequence());
@@ -547,7 +572,7 @@
 			// because we need to dissociate the restructuring of the update and condition clauses
 			// The while inside is actually a placeholder for a statement that does not exist in Javascript.
 			// This is the statement that we transform as described in WHILE.restructure rule
-			var _setupTemplate = new Template(function _t(){
+			var _forCanonTemplate = new Template(function _t(){
 				{
 					setup;
 					for (;; update) {
@@ -560,7 +585,7 @@
 			
 			this.canonicalize = function(node){
 				node.body = _blockify(node.body);
-				return _setupTemplate.generate(false, {
+				return _forCanonTemplate.generate(false, {
 					setup: node.setup,
 					update: node.update,
 					condition: node.condition,
@@ -572,10 +597,11 @@
 			var _forTemplateNoUpdate = new Template(function _t(){
 				{
 					return (function(__break){
-						return (function __loop(){
+						var __loop = __nt(function(){
 							var __ = __loop;
 							body;
-						})();
+						});
+						return __loop();
 					})(function(){
 						tail;
 					})
@@ -586,7 +612,7 @@
 				{
 					var beenHere = false;
 					return (function(__break){
-						return (function __loop(){
+						var __loop = __nt(function(){
 							var __ = __loop;
 							if (beenHere) {
 								update;
@@ -595,7 +621,8 @@
 								beenHere = true;
 							}
 							body;
-						})();
+						});
+						return __loop();
 					})(function(){
 						tail;
 					})
@@ -606,7 +633,7 @@
 				{
 					var beenHere = false;
 					return (function(__break){
-						return (function __loop(){
+						var __loop = __nt(function(){
 							var __ = __loop;
 							return (function (__) {
 								if (beenHere) {
@@ -618,7 +645,8 @@
 							})(function() {
 								body;								
 							})
-						})();
+						});
+						return __loop();
 					})(function(){
 						tail;
 					})
@@ -744,57 +772,53 @@
 				return node;
 			}
 		}(),
-		
-		CALL: new function(){
-			var _callHeadTemplate = new Template(function _t(){
-				__cb(_, cb)
-			}, true);
-			
-			var _callTailTemplate = new Template(function _t(){
-				(function(arg){
+
+		IDENTIFIER: new function(){
+			var _cbTemplate = new Template(function _t(){
+				__cb(_, function(param) {
 					tail;
 				})
 			}, true);
-			
+						
 			this.restructure = function(node){
-				var ident = node.children[0];
-				if (ident.type == DOT) 
-					ident = ident.children[1];
-				var args = node.children[1];
-				
-				switch (ident.type) {
-					case IDENTIFIER:
-						if (!_endsWithUnderscore(ident.value)) {
-							return node;
-						}
-						ident.value = ident.value.substring(0, ident.value.length - 1);
-						break;
-					case FUNCTION:
-						break;
-					default:
-						return node;
-				}
+				if (node.value != '_')
+					return node;
+
 				var id = _genId(node);
-				var result = _identifier(id);
 				
-				var cb = _callTailTemplate.generate(true, {
-					arg: _identifier(id)
+				var result = _cbTemplate.generate(true, {
+					param: _identifier(id)
 				});
-				cb.parenthesized = false;
+				result._magic = _identifier(id);
+				result._magic._tail = result._tail;
+				result._tail = null;
+				//result._head = result;
+				return result;
+			}
+		}(),
+		
+		
+		CALL: new function(){
+			this.restructure = function(node){
+				var args = node.children[1];
+				var magicArg = args.children.filter(function(arg) { return arg._magic })[0];
 				
-				args.children.push(_callHeadTemplate.generate(true, {
-					cb: cb
-				}));
+				if (!magicArg)
+					return node;
+					
+				var result = magicArg._magic;
+				
+				// store function(param) node into result._from so that we can remove param if it is unused
+				result._from = magicArg.children[1].children[1];
 				
 				var head = _return(node);
-				head._done = true;
-				if (node._tail) {
+				head._done = true;	
+				if (node._head) {
 					node._tail.children.push(head);
 					head = node._head;
+					
 				}
-				result._tail = cb._tail;
 				result._head = head;
-				result._from = cb; // remember where param comes from so we can delete it if result vanishes
 				return result;
 			}
 		}(),
@@ -816,7 +840,7 @@
 					}
 					result._async |= child._async;
 				}
-				return result;
+				return _flatten(result);
 			}
 			
 			var _finishTemplate = new Template(function _t(){
@@ -833,8 +857,16 @@
 		}(),
 		
 		SCRIPT: new function(){
-			var _functionVarTemplate = new Template(function _t(){
-				var __ = _;
+			var _functionTemplate = new Template(function _t(){
+				{
+					var __ = (_ = _ || __throw);
+					try {
+						body;
+					} 
+					catch (__err) {
+						return _(__err);
+					}
+				} 
 			});
 			
 			this.canonicalize = function(node){
@@ -843,7 +875,12 @@
 			
 			this.restructure = function(node){
 				node = _handlers.BLOCK.restructure(node);
-				node.children.splice(0, 0, _functionVarTemplate.generate(true));
+				node.type = BLOCK;
+				//node.children.splice(0, 0, _functionVarTemplate.generate(true));
+				node = _functionTemplate.generate(true, {
+					body: node
+				});
+				node.type = SCRIPT;
 				return node;
 			}
 			
@@ -937,13 +974,13 @@
 		
 		AND_OR: new function(){
 			var _template = new Template(function _t(){
-				(function _(){
+				(function(_){
 					var __val = op1;
 					if (!__val == isAnd) {
 						return __val;
 					}
 					return op2;
-				})();
+				})(_)
 			}, true);
 			this.canonicalize = function(node){
 				var op1 = node.children[0];
@@ -1008,6 +1045,28 @@
 		}
 	}
 	
+	function __nt(_, fn){
+		var i = 0; // don't go through process.nextTick/setTimeout at every iteration
+		if (typeof process != "undefined" && typeof process.nextTick == "function") 
+			return function(){
+				if (++i % 20 == 0)
+					process.nextTick(__cb(_, fn));
+				else
+					__cb(_, fn)();
+			};
+		else 
+			return function(){
+				if (++i % 20 == 0)
+					setTimeout(__cb(_, fn));
+				else
+					__cb(_, fn)();
+			}
+	}
+	
+	function __throw(err) {
+		if (err) throw err;
+	}
+	
 	exports.transform = function(source, options){
 		options = options || {};
 		//console.log("source=" + source);
@@ -1023,11 +1082,11 @@
 		//console.log("FINISHED=" + pp(node))
 		var result = pp(node);
 		if (!options.noHelpers) 
-			result += __cb;
+			result += exports.helpersSource;
 		//console.log("result=" + result);
 		return result;
 	}
 	
-	exports.callbackWrapper = __cb;
+	exports.helpersSource = __cb + "\n" + __nt + "\n" + __throw;
 	
 })(typeof exports !== 'undefined' ? exports : (window.Streamline = window.Streamline || {}));

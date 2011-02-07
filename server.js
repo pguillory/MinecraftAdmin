@@ -1,7 +1,7 @@
-require('./ext/streamlinejs/lib/node-init.js')
+require('./deps/streamlinejs/lib/node-init.js')
 
 var MinecraftAdmin = require('./.')
-var iniconf = require('./ext/iniconf')
+var iniconf = require('./deps/iniconf')
 var path = require('path')
 var sys = require('sys')
 

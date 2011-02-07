@@ -11,4 +11,4 @@ path = /mnt/Minecraft-Overviewer
 # PYTHONPATH = 
 map_path = /mnt/map
 cache_path = /mnt/mapcache
-every_seconds = 60
+run_every_seconds = 60

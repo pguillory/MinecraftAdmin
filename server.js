@@ -5,7 +5,7 @@ var iniconf = require('./ext/iniconf')
 var path = require('path')
 var sys = require('sys')
 
-var conf = iniconf.parse_file(path.join(__dirname, 'config.ini'))
+var conf = iniconf.parse_file(path.join(__dirname, 'config', 'config.ini'))
 conf.MinecraftAdmin.port = conf.MinecraftAdmin.port || 80
 conf.Minecraft.start_memory = conf.Minecraft.start_memory || '1024M'
 conf.Minecraft.max_memory = conf.Minecraft.max_memory || '1024M'

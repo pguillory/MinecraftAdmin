@@ -65,13 +65,15 @@ iniconf.validate = function(data, schema) {
             throw new Error('Missing heading: [' + heading + ']')
         }
         for (var field in schema[heading]) {
-            var value = data[heading][field]
+            var default_value = schema[heading][field].split(':')[1]
+            var type = schema[heading][field].split(':')[0]
+            var value = data[heading][field] || default_value
             if (value === undefined) {
                 throw new Error('Missing field: [' + heading + '] ' + field)
             }
-            var type = schema[heading][field]
             switch (type) {
                 case 'string':
+                    data[heading][field] = value || default_value
                     break
                 case 'number':
                     var n = parseFloat(value)

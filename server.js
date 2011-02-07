@@ -5,12 +5,23 @@ var iniconf = require('./deps/iniconf')
 var path = require('path')
 var sys = require('sys')
 
-var conf = iniconf.parse_file(path.join(__dirname, 'config', 'config.ini'))
-conf.MinecraftAdmin.port = conf.MinecraftAdmin.port || 80
-conf.Minecraft.start_memory = conf.Minecraft.start_memory || '1024M'
-conf.Minecraft.max_memory = conf.Minecraft.max_memory || '1024M'
-conf.MinecraftOverviewer.map_path  = conf.MinecraftOverviewer.map_path || path.join(conf.Minecraft.path, 'map')
-conf.MinecraftOverviewer.cache_path  = conf.MinecraftOverviewer.cache_path || path.join(conf.Minecraft.path, 'mapcache')
-conf.MinecraftOverviewer.run_every_seconds  = conf.MinecraftOverviewer.run_every_seconds || 60
+var conf = iniconf.readFileSync(path.join(__dirname, 'config', 'config.ini'))
+iniconf.validate(conf, {
+    MinecraftAdmin: {
+        port: 'number:80',
+    },
+    Minecraft: {
+        path: 'string',
+        start_memory: 'string:1024M',
+        max_memory: 'string:1024M',
+    },
+    MinecraftOverviewer: {
+        path: 'string',
+        PYTHONPATH: 'string',
+        map_path: 'string',
+        cache_path: 'string',
+        run_every_seconds: 'number:60',
+    },
+})
 
 new MinecraftAdmin.Server(conf)

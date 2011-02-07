@@ -19,14 +19,14 @@ assert.throws(function() {
     var data = {
     }
     iniconf.validate(data, schema)
-})
+}, /Missing heading/)
 assert.throws(function() {
     var data = {
         foo: {
         }
     }
     iniconf.validate(data, schema)
-})
+}, /Missing field/)
 assert.throws(function() {
     var data = {
         foo: {
@@ -34,7 +34,7 @@ assert.throws(function() {
         }
     }
     iniconf.validate(data, schema)
-})
+}, /Invalid numeric value/)
 assert.doesNotThrow(function() {
     var data = {
         foo: {
@@ -70,6 +70,33 @@ assert.throws(function() {
         }
     }
     iniconf.validate(data, schema)
+}, /Invalid type/)
+
+var schema = {
+    foo: {
+        bar: 'number:123'
+    }
+}
+assert.doesNotThrow(function() {
+    var data = {
+        foo: {
+        }
+    }
+    iniconf.validate(data, schema)
 })
+
+var schema = {
+    foo: {
+        bar: 'string:asdf'
+    }
+}
+var data = {
+    foo: {
+    }
+}
+assert.doesNotThrow(function() {
+    iniconf.validate(data, schema)
+})
+assert.strictEqual(data.foo.bar, 'asdf')
 
 console.log('OK')

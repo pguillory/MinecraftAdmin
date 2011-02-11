@@ -26,11 +26,23 @@
  */
 (function(exports){
 	/*
+	 * Context
+	 */
+	exports.setContext = function(ctx) {
+		var old = __global.__context;
+		__global.__context = ctx;
+		return old;
+	}
+	exports.getContext = function() {
+		return __global.__context;
+	}
+	
+	/*
 	 * Array utilities
 	 */
 	exports.each = function(_, array, fn){
 		if (!array || !array.length) 
-			return array;
+			return; // array;
 		var len = array.length;
 		for (var i = 0; i < len; i++) 
 			fn(_, array[i], i)
@@ -80,6 +92,16 @@
 				return true;
 		}
 		return false;
+	}
+	
+	exports.eachKey = function(_, obj, fn){
+		if (!obj) 
+			return obj;
+		for (var key in obj) {
+			if (Object.prototype.hasOwnProperty.call(obj, key)) 
+				fn(_, key, obj[key]);
+		}
+		return obj;
 	}
 	
 	/*

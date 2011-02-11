@@ -1,7 +1,7 @@
 $(document).ready(function(){
 	var module = QUnit.module;
 	var transform = Streamline.transform;
-	eval(Streamline.helpersSource);
+	eval(Streamline.helpersSource());
 	
 	var vars = "";
 	var exports = StreamlineHelpers;
@@ -164,6 +164,25 @@ $(document).ready(function(){
 			var results = spray([doIt(1), doIt(2), doIt(3)], 2).collectAll(_);
 			return [total, peak, count, results];
 		}, [6, 2, 0, [2, 4, 6]]);
+	})
+	
+	asyncTest("contexts", 3, function(){
+		evalTest(function f(_){
+			function testContext(_, x){
+				setContext({
+					val: x
+				});
+				var y = delay(_, 2 * x);
+				strictEqual(y, 2 * getContext().val);
+				return y + 1;
+			}
+			return spray([function(_){
+				return testContext(_, 3);
+			}, function(_){
+				return testContext(_, 5);
+			}
+]).collectAll(_);
+		}, [7, 11]);
 	})
 	
 	

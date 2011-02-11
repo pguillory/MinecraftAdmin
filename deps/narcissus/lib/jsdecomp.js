@@ -20,6 +20,9 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
+ *   Shu-Yu Guo <shu@rfrn.org>
+ *   Bruno Jouhier
+ *   Gregor Richards
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -464,7 +467,7 @@ Narcissus.decompiler = (function() {
                     var tc = t.children;
                     var l;
                     // see if the left needs to be a string
-                    if (/[^A-Za-z0-9_$]/.test(tc[0].value)) {
+                    if (tc[0].value === "" || /[^A-Za-z0-9_$]/.test(tc[0].value)) {
                         l = nodeStr(tc[0]);
                     } else {
                         l = pp(tc[0], d);

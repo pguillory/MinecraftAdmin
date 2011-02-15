@@ -22,6 +22,9 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
  * OTHER DEALINGS IN THE SOFTWARE.
  */
+if (typeof exports !== 'undefined') {
+    var Narcissus = require('./narcissus');
+}
 (function(exports){
 	var parse = Narcissus.parser.parse;
 	var pp = Narcissus.decompiler.pp;
@@ -246,7 +249,6 @@
 			if (ident.type == DOT) 
 				ident = ident.children[1];
 			if (_endsWithUnderscore(ident.value)) {
-				console.log("Old style streamline.js call: " + ident.value);
 				node.children[1].children.push(_identifier('_'));
 				ident.value = _removeUnderscore(ident.value);
 			}
@@ -254,7 +256,6 @@
 		else 
 			if (node.type == FUNCTION) {
 				if (_endsWithUnderscore(node.name)) {
-					console.log("Old style streamline.js function definition: " + node.name);
 					node.params.push('_');
 					node.name = _removeUnderscore(node.name);
 				}
@@ -1117,12 +1118,8 @@
 	_handlers.OR = _handlers.AND_OR;
 	
 
-	var __global = "var __global = typeof global !== 'undefined' ? global : window;"; 
-
 	function __cb(_, fn){
-		var ctx = __global.__context;
 		return function(err, result){
-			__global.__context = ctx;
 			if (err) 
 				return _(err);
 			try {
@@ -1135,9 +1132,7 @@
 	}
 	
 	function __cbNoTryCatch(_, fn){
-		var ctx = __global.__context;
 		return function(err, result){
-			__global.__context = ctx;
 			if (err) 
 				return _(err);
 			return fn(null, result);
@@ -1151,20 +1146,29 @@
 	 // don't go through process.nextTick/setTimeout at every iteration
 	function __nt(_, fn){
 		var i = 0;
+		var cb = __cb(_, fn);
+		var safeCb = function(){
+			try {
+				cb();
+			} 
+			catch (ex) {
+				cb(ex)
+			}
+		};
 		if (typeof process != "undefined" && typeof process.nextTick == "function") 
 			return function(){
 				if (++i % 20 == 0) 
-					process.nextTick(__cb(_, fn));
+					process.nextTick(safeCb);
 				else 
-					__cb(_, fn)();
+					cb();
 			};
 		else 
 			return function(){
 				if (++i % 20 == 0) 
-					setTimeout(__cb(_, fn));
+					setTimeout(safeCb);
 				else 
-					__cb(_, fn)();
-			}
+					cb();
+			};
 	}
 	
 	function __throw(err) {
@@ -1188,7 +1192,7 @@
 		node = _simplify(node);			
 		
 		var result = pp(node);
-		// add helpers at beginning so that __global is initialized before any other code
+		// add helpers at beginning
 		if (!options.noHelpers) 
 			result = exports.helpersSource(options) + result;
 		//console.log("result=" + result);
@@ -1198,7 +1202,9 @@
 	function _trim(fn) { return fn.toString().replace(/\s+/g, " "); }
 	
 	exports.helpersSource = function(options){
-		return "\n" + __global + "\n" + _trim(__cbStr(options)) + "\n" + _trim(__nt) + "\n" + _trim(__throw);
+		return "\n" + _trim(__cbStr(options)) + "\n" + _trim(__nt) + "\n" + _trim(__throw) + "\n";
 	}
+	
+	exports.version = "0.1.0b";
 	
 })(typeof exports !== 'undefined' ? exports : (window.Streamline = window.Streamline || {}));

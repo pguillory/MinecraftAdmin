@@ -1,4 +1,4 @@
-require('./deps/streamlinejs/lib/node-init.js')
+require('./deps/streamlinejs').register()
 
 var Minecraft = require('./.')
 var iniconf = require('./deps/iniconf')

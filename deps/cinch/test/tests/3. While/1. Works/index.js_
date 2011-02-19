@@ -1,0 +1,18 @@
+exports.test = function(next, assert) {
+    pow(2, 3, function(err, result) {
+        assert.equal(result, 8)
+        next()
+    })
+}
+
+function pow_(base, exponent) {
+    function g_() {
+        return exponent--
+    }
+
+    var n = 1
+    while (g_() > 0) {
+        n *= base
+    }
+    return n
+}

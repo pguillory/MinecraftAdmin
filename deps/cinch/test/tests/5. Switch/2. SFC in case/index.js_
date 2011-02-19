@@ -1,0 +1,21 @@
+exports.test = function(next, assert) {
+    f(function(err, result) {
+        assert.equal(result, 5)
+        next()
+    })
+}
+
+function f_() {
+    switch ('foo') {
+        case 'bar':
+            break
+        case 'foo':
+            return g_()
+        default:
+            return 7
+    }
+}
+
+function g(callback) {
+    return callback(null, 5)
+}

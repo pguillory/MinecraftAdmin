@@ -1,0 +1,22 @@
+exports.test = function(next, assert) {
+    f(function(err, result) {
+        assert.is_null(err)
+        assert.equal(result, 5)
+        assert.is_true(g_called)
+        next()
+    })
+}
+
+function f_() {
+    try {
+        throw new Error()
+    } catch (err) {
+        g_()
+    }
+    return 5
+}
+
+var g_called = false
+function g_() {
+    g_called = true
+}

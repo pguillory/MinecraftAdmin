@@ -1,0 +1,8 @@
+#!/bin/bash
+if [ -h "$0" ]; then
+    self=`readlink $0`
+else
+    self=$0
+fi
+dir=`dirname $self`
+node $dir/../lib/run.js $*
